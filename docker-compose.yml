@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: secureshare-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: secureshare
+      POSTGRES_PASSWORD: secureshare
+      POSTGRES_DB: secureshare
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: secureshare-redis
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./apps/backend
+    container_name: secureshare-backend
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      DATABASE_URL: postgres://secureshare:secureshare@postgres:5432/secureshare
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-secret
+      APP_ENV: local
+
+  frontend:
+    build: ./apps/frontend
+    container_name: secureshare-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+
+volumes:
+  postgres_data:
