@@ -21,5 +21,25 @@ model User {
   createdAt DateTime @default(now())
 
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id])
+  secureNotes SecureNote[]
+}
+
+model SecureNote {
+  id           String    @id @default(uuid())
+  slug         String    @unique
+  content      String
+  expiresAt    DateTime?
+  lastViewedAt DateTime?
+  maxViews     Int?
+  viewCount    Int       @default(0)
+  isDeleted    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  createdBy    String?
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  @@index([slug])
+  @@index([expiresAt])
 }
