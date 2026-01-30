@@ -2,9 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import type { SecureNote } from '@prisma/client';
-
-const CACHE_KEY_PREFIX = 'note:';
-const CACHE_MAX_TTL_SEC = 3600; // 1 hour
+import { CACHE_KEY_PREFIX, CACHE_MAX_TTL_SEC } from '../constants';
 
 @Injectable()
 export class NotesService {

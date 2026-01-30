@@ -1,9 +1,10 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import Redis from 'ioredis';
-
-const RATE_LIMIT_WINDOW_SEC = 60;
-const RATE_LIMIT_MAX_REQUESTS = 30;
-const RATE_LIMIT_KEY_PREFIX = 'ratelimit:ip:';
+import {
+  RATE_LIMIT_KEY_PREFIX,
+  RATE_LIMIT_MAX_REQUESTS,
+  RATE_LIMIT_WINDOW_SEC,
+} from '../constants';
 
 @Injectable()
 export class RedisService implements OnModuleDestroy {
