@@ -1,7 +1,15 @@
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  NotFoundException,
+  UseGuards,
+} from '@nestjs/common';
+import { RateLimitGuard } from '../redis/rate-limit.guard';
 import { NotesService } from './notes.service';
 
 @Controller('s')
+@UseGuards(RateLimitGuard)
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
