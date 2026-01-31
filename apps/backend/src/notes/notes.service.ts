@@ -1,14 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { RedisService } from '../redis/redis.service';
+import { InjectMetric } from '@willsoto/nestjs-prometheus';
+import type { Counter } from 'prom-client';
 import type { SecureNote } from '@prisma/client';
 import { CACHE_KEY_PREFIX, CACHE_MAX_TTL_SEC } from '../constants';
+import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 export class NotesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    @InjectMetric('note_read_total') private readonly noteReadTotal: Counter<string>,
   ) {}
 
   async readBySlug(slug: string): Promise<SecureNote | null> {
@@ -17,6 +20,7 @@ export class NotesService {
     if (this.redis.isEnabled) {
       const cached = await this.redis.get<SecureNote>(cacheKey);
       if (cached) {
+        this.noteReadTotal.inc({ source: 'redis' });
         this.incrementViewCountOnly(slug)
           .then(({ invalidate }) => {
             if (invalidate) {
@@ -54,6 +58,7 @@ export class NotesService {
         await this.redis.del(cacheKey);
       }
     }
+    this.noteReadTotal.inc({ source: 'postgres' });
     return note;
   }
 
