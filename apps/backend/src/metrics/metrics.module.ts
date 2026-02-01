@@ -10,6 +10,11 @@ const noteReadTotalProvider = makeCounterProvider({
   labelNames: ['source'],
 });
 
+const noteCreateTotalProvider = makeCounterProvider({
+  name: 'note_create_total',
+  help: 'Total notes created',
+});
+
 const rateLimitChecksTotalProvider = makeCounterProvider({
   name: 'rate_limit_checks_total',
   help: 'Total rate limit checks (every request hits Redis for rate limiting)',
@@ -29,12 +34,14 @@ const rateLimitRejectedTotalProvider = makeCounterProvider({
   ],
   providers: [
     noteReadTotalProvider,
+    noteCreateTotalProvider,
     rateLimitChecksTotalProvider,
     rateLimitRejectedTotalProvider,
   ],
   exports: [
     PrometheusModule,
     noteReadTotalProvider,
+    noteCreateTotalProvider,
     rateLimitChecksTotalProvider,
     rateLimitRejectedTotalProvider,
   ],

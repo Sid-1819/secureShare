@@ -1,10 +1,19 @@
 import { Injectable } from '@nestjs/common';
+import { randomBytes } from 'node:crypto';
 import { InjectMetric } from '@willsoto/nestjs-prometheus';
 import type { Counter } from 'prom-client';
 import type { SecureNote } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { CACHE_KEY_PREFIX, CACHE_MAX_TTL_SEC } from '../constants';
+import type { CreateNoteDto } from './dto/create-note.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
+
+const SLUG_BYTES = 12;
+
+function generateSlug(): string {
+  return randomBytes(SLUG_BYTES).toString('base64url');
+}
 
 @Injectable()
 export class NotesService {
@@ -12,6 +21,7 @@ export class NotesService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     @InjectMetric('note_read_total') private readonly noteReadTotal: Counter<string>,
+    @InjectMetric('note_create_total') private readonly noteCreateTotal: Counter<string>,
   ) {}
 
   async readBySlug(slug: string): Promise<SecureNote | null> {
@@ -102,5 +112,28 @@ export class NotesService {
       });
     }
     return { invalidate };
+  }
+
+  async create(dto: CreateNoteDto): Promise<SecureNote> {
+    const data: Prisma.SecureNoteCreateInput = {
+      slug: generateSlug(),
+      content: dto.content,
+      expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
+      maxViews: dto.maxViews ?? undefined,
+    };
+
+    let note: SecureNote;
+    try {
+      note = await this.prisma.secureNote.create({ data });
+    } catch (err) {
+      const isUniqueViolation =
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002';
+      if (!isUniqueViolation) throw err;
+      data.slug = generateSlug();
+      note = await this.prisma.secureNote.create({ data });
+    }
+    this.noteCreateTotal.inc();
+    return note;
   }
 }
