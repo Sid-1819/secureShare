@@ -1,0 +1,27 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          cd apps/backend
+          npm ci
+
+      - name: Build Docker image
+        run: |
+          docker build -t vanixxx-backend:dev apps/backend
