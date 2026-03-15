@@ -4,6 +4,14 @@ import {
   RATE_LIMIT_KEY_PREFIX,
   RATE_LIMIT_MAX_REQUESTS,
   RATE_LIMIT_WINDOW_SEC,
+  RATE_LIMIT_CLIENT_KEY_PREFIX,
+  RATE_LIMIT_CREATE_MINUTE_WINDOW_SEC,
+  RATE_LIMIT_CREATE_MINUTE_MAX,
+  RATE_LIMIT_CREATE_DAILY_WINDOW_SEC,
+  RATE_LIMIT_CREATE_DAILY_MAX,
+  WRONG_PASSWORD_KEY_PREFIX,
+  WRONG_PASSWORD_WINDOW_SEC,
+  WRONG_PASSWORD_MAX_ATTEMPTS,
 } from '../constants';
 
 @Injectable()
@@ -74,6 +82,58 @@ export class RedisService implements OnModuleDestroy {
       return count <= RATE_LIMIT_MAX_REQUESTS;
     } catch {
       return true;
+    }
+  }
+
+  /**
+   * Create-note rate limit: 3 per minute and 10 per 24h per client (IP + user-agent hash).
+   * Returns true if allowed, false if over either limit.
+   */
+  async checkCreateRateLimit(clientHash: string): Promise<boolean> {
+    if (!this.client) return true;
+    const keyMinute = `${RATE_LIMIT_CLIENT_KEY_PREFIX}${clientHash}:1m`;
+    const keyDay = `${RATE_LIMIT_CLIENT_KEY_PREFIX}${clientHash}:24h`;
+    try {
+      const [countMinute, countDay] = await Promise.all([
+        this.client.incr(keyMinute),
+        this.client.incr(keyDay),
+      ]);
+      if (countMinute === 1) await this.client.expire(keyMinute, RATE_LIMIT_CREATE_MINUTE_WINDOW_SEC);
+      if (countDay === 1) await this.client.expire(keyDay, RATE_LIMIT_CREATE_DAILY_WINDOW_SEC);
+      return countMinute <= RATE_LIMIT_CREATE_MINUTE_MAX && countDay <= RATE_LIMIT_CREATE_DAILY_MAX;
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * Returns true if wrong-password attempts for this slug have exceeded the limit (should return 429).
+   */
+  async isWrongPasswordLimitExceeded(slug: string): Promise<boolean> {
+    if (!this.client) return false;
+    const key = `${WRONG_PASSWORD_KEY_PREFIX}${slug}`;
+    try {
+      const raw = await this.client.get(key);
+      const count = raw ? parseInt(raw, 10) : 0;
+      return count >= WRONG_PASSWORD_MAX_ATTEMPTS;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Record a wrong password attempt for this slug. Call only when password verification failed.
+   */
+  async recordWrongPasswordAttempt(slug: string): Promise<void> {
+    if (!this.client) return;
+    const key = `${WRONG_PASSWORD_KEY_PREFIX}${slug}`;
+    try {
+      const count = await this.client.incr(key);
+      if (count === 1) {
+        await this.client.expire(key, WRONG_PASSWORD_WINDOW_SEC);
+      }
+    } catch {
+      // Degrade silently
     }
   }
 
