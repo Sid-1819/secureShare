@@ -18,6 +18,14 @@ import { NotesService } from './notes.service';
 
 const NOTE_PASSWORD_HEADER = 'x-note-password';
 
+function getPublicAppUrl(): string {
+  if (process.env.PUBLIC_APP_URL) return process.env.PUBLIC_APP_URL;
+  return process.env.NODE_ENV === 'production'
+    ? 'https://1note.xyz'
+    : 'http://localhost:5173';
+}
+const PUBLIC_APP_URL = getPublicAppUrl();
+
 @Controller('s')
 @UseGuards(RateLimitGuard)
 export class NotesController {
@@ -27,7 +35,13 @@ export class NotesController {
   @HttpCode(HttpStatus.CREATED)
   async createNote(@Body() dto: CreateNoteDto) {
     const note = await this.notesService.create(dto);
-    return { slug: note.slug };
+    const url = `${PUBLIC_APP_URL.replace(/\/$/, '')}/s/${note.slug}`;
+    return {
+      slug: note.slug,
+      url,
+      expiresAt: note.expiresAt?.toISOString() ?? null,
+      maxViews: note.maxViews ?? null,
+    };
   }
 
   @Get(':slug')

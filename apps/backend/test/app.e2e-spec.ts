@@ -31,7 +31,7 @@ describe('App (e2e)', () => {
   });
 
   describe('POST /s (create note)', () => {
-    it('returns 201 with slug for valid body', () => {
+    it('returns 201 with slug, url, expiresAt, maxViews for valid body', () => {
       return request(app.getHttpServer())
         .post('/s')
         .send({ content: 'hello world' })
@@ -40,6 +40,10 @@ describe('App (e2e)', () => {
           expect(res.body).toHaveProperty('slug');
           expect(typeof res.body.slug).toBe('string');
           expect(res.body.slug.length).toBeGreaterThan(0);
+          expect(res.body).toHaveProperty('url');
+          expect(res.body.url).toContain('/s/' + res.body.slug);
+          expect(res.body).toHaveProperty('expiresAt');
+          expect(res.body).toHaveProperty('maxViews');
         });
     });
 
