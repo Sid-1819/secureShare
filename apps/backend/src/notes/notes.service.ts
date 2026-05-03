@@ -19,7 +19,10 @@ function generateSlug(): string {
 
 export type ReadNoteResult =
   | { success: true; content: string }
-  | { success: false; code: 'PASSWORD_REQUIRED' | 'INVALID_PASSWORD' | 'WRONG_PASSWORD_LIMIT' }
+  | {
+      success: false;
+      code: 'PASSWORD_REQUIRED' | 'INVALID_PASSWORD' | 'WRONG_PASSWORD_LIMIT';
+    }
   | null;
 
 @Injectable()
@@ -29,8 +32,10 @@ export class NotesService {
     private readonly redis: RedisService,
     private readonly encryptionService: EncryptionService,
     private readonly passwordService: PasswordService,
-    @InjectMetric('note_read_total') private readonly noteReadTotal: Counter<string>,
-    @InjectMetric('note_create_total') private readonly noteCreateTotal: Counter<string>,
+    @InjectMetric('note_read_total')
+    private readonly noteReadTotal: Counter<string>,
+    @InjectMetric('note_create_total')
+    private readonly noteCreateTotal: Counter<string>,
   ) {}
 
   /**
@@ -66,7 +71,10 @@ export class NotesService {
       if (limitExceeded) {
         return { success: false, code: 'WRONG_PASSWORD_LIMIT' };
       }
-      const valid = await this.passwordService.compare(password, note.passwordHash);
+      const valid = await this.passwordService.compare(
+        password,
+        note.passwordHash,
+      );
       if (!valid) {
         await this.redis.recordWrongPasswordAttempt(slug);
         return { success: false, code: 'INVALID_PASSWORD' };
@@ -149,8 +157,7 @@ export class NotesService {
     `;
     const row = rows[0];
     if (!row) return { invalidate: false };
-    const invalidate =
-      row.maxViews != null && row.viewCount >= row.maxViews;
+    const invalidate = row.maxViews != null && row.viewCount >= row.maxViews;
     if (invalidate) {
       await this.prisma.secureNote.update({
         where: { id: row.id },

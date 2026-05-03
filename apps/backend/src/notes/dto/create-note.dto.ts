@@ -28,13 +28,17 @@ function isFutureDate(value: unknown): boolean {
 const IsFutureDate = () =>
   ValidateBy({
     name: 'isFutureDate',
-    validator: { validate: isFutureDate, defaultMessage: () => 'expiresAt must be a future date' },
+    validator: {
+      validate: isFutureDate,
+      defaultMessage: () => 'expiresAt must be a future date',
+    },
   });
 
 function isStrongPassword(value: unknown): boolean {
   if (typeof value !== 'string') return false;
   const s = value;
-  if (s.length < PASSWORD_MIN_LENGTH || s.length > PASSWORD_MAX_LENGTH) return false;
+  if (s.length < PASSWORD_MIN_LENGTH || s.length > PASSWORD_MAX_LENGTH)
+    return false;
   if (!/[a-z]/.test(s)) return false;
   if (!/[A-Z]/.test(s)) return false;
   if (!/[0-9]/.test(s)) return false;
@@ -55,7 +59,9 @@ const IsStrongPassword = () =>
 export class CreateNoteDto {
   @IsString()
   @IsNotEmpty({ message: 'content must not be empty' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }): unknown =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @MaxLength(CONTENT_MAX_LENGTH, {
     message: `content must not exceed ${CONTENT_MAX_LENGTH} characters`,
   })
@@ -71,15 +77,23 @@ export class CreateNoteDto {
   @IsInt()
   @Min(1, { message: 'maxViews must be at least 1' })
   @Max(MAX_VIEWS_CAP, { message: `maxViews must not exceed ${MAX_VIEWS_CAP}` })
-  @Transform(({ value }) => (value != null ? Number(value) : value))
+  @Transform(({ value }: { value: unknown }): unknown =>
+    value != null ? Number(value) : value,
+  )
   maxViews?: number;
 
   @IsOptional()
   @IsString()
   @ValidateIf((_o, v) => v != null && v !== '')
-  @MinLength(PASSWORD_MIN_LENGTH, { message: `password must be at least ${PASSWORD_MIN_LENGTH} characters` })
-  @MaxLength(PASSWORD_MAX_LENGTH, { message: `password must not exceed ${PASSWORD_MAX_LENGTH} characters` })
+  @MinLength(PASSWORD_MIN_LENGTH, {
+    message: `password must be at least ${PASSWORD_MIN_LENGTH} characters`,
+  })
+  @MaxLength(PASSWORD_MAX_LENGTH, {
+    message: `password must not exceed ${PASSWORD_MAX_LENGTH} characters`,
+  })
   @IsStrongPassword()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }): unknown =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   password?: string;
 }

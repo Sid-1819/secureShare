@@ -13,14 +13,21 @@ async function bootstrap() {
     'https://1note.siddheshshirdhankar.com',
   ];
   app.enableCors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ): void => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
       if (
         allowedOrigins.includes(origin) ||
         origin.endsWith('.vercel.app') ||
         origin.startsWith('chrome-extension://')
       ) {
-        return callback(null, true);
+        callback(null, true);
+        return;
       }
       callback(new Error('Not allowed by CORS'));
     },
@@ -34,4 +41,4 @@ async function bootstrap() {
   );
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+void bootstrap();
