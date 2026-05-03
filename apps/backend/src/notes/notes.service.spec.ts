@@ -15,6 +15,10 @@ import { getToken } from '@willsoto/nestjs-prometheus';
 import { NotesService } from './notes.service';
 import type { CreateNoteDto } from './dto/create-note.dto';
 
+type SecureNoteCreateArgs = {
+  data: Record<string, unknown>;
+};
+
 describe('NotesService', () => {
   let service: NotesService;
   let prisma: PrismaService;
@@ -64,7 +68,10 @@ describe('NotesService', () => {
         { provide: RedisService, useValue: mockRedis },
         { provide: PasswordService, useValue: mockPasswordService },
         { provide: getToken('note_read_total'), useValue: mockNoteReadTotal },
-        { provide: getToken('note_create_total'), useValue: mockNoteCreateTotal },
+        {
+          provide: getToken('note_create_total'),
+          useValue: mockNoteCreateTotal,
+        },
       ],
     }).compile();
 
@@ -98,14 +105,20 @@ describe('NotesService', () => {
     };
 
     it('creates a note with encrypted content and returns it with a generated slug', async () => {
-      (prisma.secureNote.create as jest.Mock).mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-        Promise.resolve({ ...createdNote, ...data, content: data.content }),
+      (prisma.secureNote.create as jest.Mock).mockImplementation(
+        ({ data }: { data: Record<string, unknown> }) =>
+          Promise.resolve({ ...createdNote, ...data, content: data.content }),
       );
 
       const result = await service.create(dto);
 
-      expect(prisma.secureNote.create).toHaveBeenCalledTimes(1);
-      const call = (prisma.secureNote.create as jest.Mock).mock.calls[0][0];
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- same reference as jest.fn() in PrismaService test double
+      const createMock = prisma.secureNote.create as jest.Mock<
+        Promise<unknown>,
+        [SecureNoteCreateArgs]
+      >;
+      expect(createMock).toHaveBeenCalledTimes(1);
+      const call = createMock.mock.calls[0][0];
       expect(call.data.content).not.toBe(dto.content);
       expect(call.data.content).toMatch(/^[A-Za-z0-9+/]+=*$/);
       expect(encryptionService.decrypt(result.content)).toBe(dto.content);
@@ -124,14 +137,20 @@ describe('NotesService', () => {
         content: 'content',
         password: 'MyPass1!',
       };
-      (prisma.secureNote.create as jest.Mock).mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-        Promise.resolve({ ...createdNote, ...data, content: data.content }),
+      (prisma.secureNote.create as jest.Mock).mockImplementation(
+        ({ data }: { data: Record<string, unknown> }) =>
+          Promise.resolve({ ...createdNote, ...data, content: data.content }),
       );
 
       await service.create(dtoWithPassword);
 
       expect(mockPasswordService.hash).toHaveBeenCalledWith('MyPass1!');
-      const call = (prisma.secureNote.create as jest.Mock).mock.calls[0][0];
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- same reference as jest.fn() in PrismaService test double
+      const createMock = prisma.secureNote.create as jest.Mock<
+        Promise<unknown>,
+        [SecureNoteCreateArgs]
+      >;
+      const call = createMock.mock.calls[0][0];
       expect(call.data.passwordHash).toBe('hashedpassword');
     });
 
@@ -141,23 +160,32 @@ describe('NotesService', () => {
         expiresAt: '2030-01-01T00:00:00.000Z',
         maxViews: 5,
       };
-      (prisma.secureNote.create as jest.Mock).mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-        Promise.resolve({ ...createdNote, ...data, content: data.content }),
+      (prisma.secureNote.create as jest.Mock).mockImplementation(
+        ({ data }: { data: Record<string, unknown> }) =>
+          Promise.resolve({ ...createdNote, ...data, content: data.content }),
       );
 
       await service.create(dtoWithOpts);
 
-      const call = (prisma.secureNote.create as jest.Mock).mock.calls[0][0];
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- same reference as jest.fn() in PrismaService test double
+      const createMock = prisma.secureNote.create as jest.Mock<
+        Promise<unknown>,
+        [SecureNoteCreateArgs]
+      >;
+      const call = createMock.mock.calls[0][0];
       expect(call.data.expiresAt).toEqual(new Date(dtoWithOpts.expiresAt!));
       expect(call.data.maxViews).toBe(5);
       expect(call.data.content).not.toBe(dtoWithOpts.content);
     });
 
     it('retries with new slug on unique constraint violation (P2002)', async () => {
-      const err = new Prisma.PrismaClientKnownRequestError('Unique constraint', {
-        code: 'P2002',
-        clientVersion: 'x',
-      });
+      const err = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint',
+        {
+          code: 'P2002',
+          clientVersion: 'x',
+        },
+      );
       (prisma.secureNote.create as jest.Mock)
         .mockRejectedValueOnce(err)
         .mockImplementationOnce(({ data }: { data: Record<string, unknown> }) =>
@@ -167,7 +195,12 @@ describe('NotesService', () => {
       const result = await service.create(dto);
 
       expect(encryptionService.decrypt(result.content)).toBe(dto.content);
-      expect(prisma.secureNote.create).toHaveBeenCalledTimes(2);
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- same reference as jest.fn() in PrismaService test double
+      const createMock = prisma.secureNote.create as jest.Mock<
+        Promise<unknown>,
+        [SecureNoteCreateArgs]
+      >;
+      expect(createMock).toHaveBeenCalledTimes(2);
       expect(mockNoteCreateTotal.inc).toHaveBeenCalledTimes(1);
     });
 
@@ -176,7 +209,12 @@ describe('NotesService', () => {
       (prisma.secureNote.create as jest.Mock).mockRejectedValue(err);
 
       await expect(service.create(dto)).rejects.toThrow('DB connection failed');
-      expect(prisma.secureNote.create).toHaveBeenCalledTimes(1);
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- same reference as jest.fn() in PrismaService test double
+      const createMock = prisma.secureNote.create as jest.Mock<
+        Promise<unknown>,
+        [SecureNoteCreateArgs]
+      >;
+      expect(createMock).toHaveBeenCalledTimes(1);
       expect(mockNoteCreateTotal.inc).not.toHaveBeenCalled();
     });
   });
@@ -200,13 +238,17 @@ describe('NotesService', () => {
         userId: null,
       };
       (prisma.secureNote.findFirst as jest.Mock).mockResolvedValue(dbNote);
-      (prisma.$queryRaw as jest.Mock).mockResolvedValue([{ ...dbNote, viewCount: 1 }]);
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([
+        { ...dbNote, viewCount: 1 },
+      ]);
 
       const result = await service.readBySlug('the-slug');
 
       expect(result).not.toBeNull();
       expect(result).toEqual({ success: true, content: plainContent });
-      expect(mockNoteReadTotal.inc).toHaveBeenCalledWith({ source: 'postgres' });
+      expect(mockNoteReadTotal.inc).toHaveBeenCalledWith({
+        source: 'postgres',
+      });
     });
 
     it('returns note with decrypted content when read from Redis cache', async () => {
@@ -227,8 +269,10 @@ describe('NotesService', () => {
         userId: null,
       };
       mockRedis.isEnabled = true;
-      (mockRedis.get as jest.Mock).mockResolvedValue(cachedNote);
-      (prisma.$queryRaw as jest.Mock).mockResolvedValue([{ id: 'id-1', viewCount: 2, maxViews: 2 }]);
+      mockRedis.get.mockResolvedValue(cachedNote);
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([
+        { id: 'id-1', viewCount: 2, maxViews: 2 },
+      ]);
 
       const result = await service.readBySlug('cached-slug');
 
@@ -258,7 +302,9 @@ describe('NotesService', () => {
       const result = await service.readBySlug('protected-slug');
 
       expect(result).toEqual({ success: false, code: 'PASSWORD_REQUIRED' });
-      expect(prisma.$queryRaw).not.toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- same reference as jest.fn() in PrismaService test double
+      const rawMock = prisma.$queryRaw as jest.Mock;
+      expect(rawMock).not.toHaveBeenCalled();
     });
 
     it('returns INVALID_PASSWORD when password is wrong', async () => {
@@ -283,8 +329,12 @@ describe('NotesService', () => {
       const result = await service.readBySlug('protected-slug', 'wrong');
 
       expect(result).toEqual({ success: false, code: 'INVALID_PASSWORD' });
-      expect(mockRedis.recordWrongPasswordAttempt).toHaveBeenCalledWith('protected-slug');
-      expect(prisma.$queryRaw).not.toHaveBeenCalled();
+      expect(mockRedis.recordWrongPasswordAttempt).toHaveBeenCalledWith(
+        'protected-slug',
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- same reference as jest.fn() in PrismaService test double
+      const rawMock = prisma.$queryRaw as jest.Mock;
+      expect(rawMock).not.toHaveBeenCalled();
     });
 
     it('returns content when password is correct', async () => {
@@ -305,12 +355,17 @@ describe('NotesService', () => {
         userId: null,
       };
       (prisma.secureNote.findFirst as jest.Mock).mockResolvedValue(dbNote);
-      (prisma.$queryRaw as jest.Mock).mockResolvedValue([{ ...dbNote, viewCount: 1 }]);
+      (prisma.$queryRaw as jest.Mock).mockResolvedValue([
+        { ...dbNote, viewCount: 1 },
+      ]);
 
       const result = await service.readBySlug('protected-slug', 'correct');
 
       expect(result).toEqual({ success: true, content: plainContent });
-      expect(mockPasswordService.compare).toHaveBeenCalledWith('correct', 'hashed');
+      expect(mockPasswordService.compare).toHaveBeenCalledWith(
+        'correct',
+        'hashed',
+      );
     });
   });
 });

@@ -49,7 +49,10 @@ export class NotesController {
     @Param('slug') slug: string,
     @Headers(NOTE_PASSWORD_HEADER) password?: string,
   ) {
-    const result = await this.notesService.readBySlug(slug, password?.trim() || undefined);
+    const result = await this.notesService.readBySlug(
+      slug,
+      password?.trim() || undefined,
+    );
 
     if (result === null) {
       throw new NotFoundException();
@@ -60,7 +63,8 @@ export class NotesController {
         throw new HttpException(
           {
             code: result.code,
-            message: 'Too many wrong passphrase attempts. Try again in 15 minutes.',
+            message:
+              'Too many wrong passphrase attempts. Try again in 15 minutes.',
           },
           HttpStatus.TOO_MANY_REQUESTS,
         );

@@ -47,12 +47,16 @@ describe('EncryptionService', () => {
     });
 
     it('throws on invalid base64 length (too short)', () => {
-      expect(() => service.decrypt('YQ==')).toThrow('Invalid encryption payload');
+      expect(() => service.decrypt('YQ==')).toThrow(
+        'Invalid encryption payload',
+      );
     });
 
     it('throws when ENCRYPTION_KEY is missing', () => {
       delete process.env.ENCRYPTION_KEY;
-      expect(() => new EncryptionService()).toThrow('ENCRYPTION_KEY is required');
+      expect(() => new EncryptionService()).toThrow(
+        'ENCRYPTION_KEY is required',
+      );
     });
 
     it('throws when ENCRYPTION_KEY has invalid format', () => {

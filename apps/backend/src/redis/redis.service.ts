@@ -25,7 +25,8 @@ export class RedisService implements OnModuleDestroy {
     if (this.enabled) {
       this.client = new Redis(url!, {
         maxRetriesPerRequest: 3,
-        retryStrategy: (times) => (times <= 3 ? Math.min(times * 100, 3000) : null),
+        retryStrategy: (times) =>
+          times <= 3 ? Math.min(times * 100, 3000) : null,
       });
     }
   }
@@ -98,9 +99,17 @@ export class RedisService implements OnModuleDestroy {
         this.client.incr(keyMinute),
         this.client.incr(keyDay),
       ]);
-      if (countMinute === 1) await this.client.expire(keyMinute, RATE_LIMIT_CREATE_MINUTE_WINDOW_SEC);
-      if (countDay === 1) await this.client.expire(keyDay, RATE_LIMIT_CREATE_DAILY_WINDOW_SEC);
-      return countMinute <= RATE_LIMIT_CREATE_MINUTE_MAX && countDay <= RATE_LIMIT_CREATE_DAILY_MAX;
+      if (countMinute === 1)
+        await this.client.expire(
+          keyMinute,
+          RATE_LIMIT_CREATE_MINUTE_WINDOW_SEC,
+        );
+      if (countDay === 1)
+        await this.client.expire(keyDay, RATE_LIMIT_CREATE_DAILY_WINDOW_SEC);
+      return (
+        countMinute <= RATE_LIMIT_CREATE_MINUTE_MAX &&
+        countDay <= RATE_LIMIT_CREATE_DAILY_MAX
+      );
     } catch {
       return true;
     }

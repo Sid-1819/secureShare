@@ -5,6 +5,13 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 
+type CreateNoteResponseBody = {
+  slug: string;
+  url: string;
+  expiresAt: unknown;
+  maxViews: unknown;
+};
+
 describe('App (e2e)', () => {
   let app: INestApplication<App>;
 
@@ -37,21 +44,19 @@ describe('App (e2e)', () => {
         .send({ content: 'hello world' })
         .expect(201)
         .expect((res) => {
-          expect(res.body).toHaveProperty('slug');
-          expect(typeof res.body.slug).toBe('string');
-          expect(res.body.slug.length).toBeGreaterThan(0);
-          expect(res.body).toHaveProperty('url');
-          expect(res.body.url).toContain('/s/' + res.body.slug);
-          expect(res.body).toHaveProperty('expiresAt');
-          expect(res.body).toHaveProperty('maxViews');
+          const body = res.body as CreateNoteResponseBody;
+          expect(body).toHaveProperty('slug');
+          expect(typeof body.slug).toBe('string');
+          expect(body.slug.length).toBeGreaterThan(0);
+          expect(body).toHaveProperty('url');
+          expect(body.url).toContain('/s/' + body.slug);
+          expect(body).toHaveProperty('expiresAt');
+          expect(body).toHaveProperty('maxViews');
         });
     });
 
     it('returns 400 when content is missing', () => {
-      return request(app.getHttpServer())
-        .post('/s')
-        .send({})
-        .expect(400);
+      return request(app.getHttpServer()).post('/s').send({}).expect(400);
     });
 
     it('returns 400 when content is empty string', () => {
